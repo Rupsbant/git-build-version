@@ -2,7 +2,7 @@ extern crate git2;
 #[macro_use]
 extern crate quick_error;
 
-use git2::{Repository, DescribeOptions};
+use git2::{Repository, DescribeOptions, DescribeFormatOptions};
 use std::env;
 use std::convert::AsRef;
 use std::fs::{File, create_dir_all};
@@ -42,10 +42,11 @@ pub fn write_version <P: AsRef<Path>>(topdir: P) -> Result<(), Error> {
     let path = path.join("version.rs");
 
     let repo = try!(Repository::discover(topdir));
-    let desc = try!(repo.describe(&DescribeOptions::new().describe_tags().show_commit_oid_as_fallback(true)));
+    let desc = try!(repo.describe(&DescribeOptions::new().describe_all().show_commit_oid_as_fallback(true)));
 
-
-    let content = format!("static VERSION: &'static str = {:?};\n", try!(desc.format(None)));
+    let mut opt = DescribeFormatOptions::new();
+    opt.abbreviated_size(40).always_use_long_format(true).dirty_suffix("-dirty");
+    let content = format!("static VERSION: &'static str = {:?};\n", try!(desc.format(Some(&opt))));
 
     let is_fresh = if path.exists() {
         try!(same_content_as(&path, &content))
